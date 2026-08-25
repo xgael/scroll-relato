@@ -1,0 +1,20 @@
+/*
+ * Los tokens que espera relato.module.css. Van en tu globals.css, no aquí.
+ * Cámbialos por los de la marca del proyecto.
+ *
+ * La superficie del relato es OSCURA porque el texto vive encima de la
+ * película: el papel vuelve al final, cuando termina el cine y empieza la
+ * página. El acento claro existe porque el acento de marca suele hundirse
+ * sobre el negro; comprueba que pase AA sobre --black antes de usarlo.
+ */
+:root {
+  --black: #140c09; /* negro CÁLIDO, no neutro: el acento se lee a otra temperatura */
+  --paper: #ffffff;
+  --fg: #140c09;
+  --fg-muted: #5f5854; /* 6.4:1 sobre papel */
+
+  --acento: #cc0000; /* el de marca, para el cierre en papel */
+  --acento-claro: #ff3b3b; /* la versión que sí se lee sobre la película */
+
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}

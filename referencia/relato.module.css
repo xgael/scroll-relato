@@ -1,0 +1,281 @@
+.marca {
+  position: fixed;
+  inset: 0 0 auto 0;
+  padding: 1.5rem 2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  z-index: 3;
+  will-change: opacity;
+  mix-blend-mode: difference; /* legible tanto sobre la noche como sobre el amanecer */
+}
+
+.marca img {
+  width: 30px;
+  height: auto;
+}
+
+.marca span {
+  font-family: var(--font-display), sans-serif;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-size: 1.0625rem;
+  color: var(--paper);
+}
+
+/* El recorrido lo declara el CSS en dvh y no innerHeight: en iOS la barra de
+   direcciones cambia innerHeight a media animacion. */
+.escena {
+  position: relative;
+  width: 100%;
+  height: 900dvh;
+}
+
+.pegado {
+  position: relative;
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--black);
+}
+
+.lienzo {
+  width: 100%;
+  height: 100%;
+}
+
+/*
+ * El velo pesa en el CENTRO, no arriba y abajo: el texto vive en medio y el
+ * acto 4 amanece, asi que con un degradado vertical el blanco se perdia
+ * contra el cielo quemado. El radial oscurece justo donde va el parlamento y
+ * deja respirar las esquinas, que es donde esta la escena.
+ */
+.velo {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(70% 60% at 50% 50%, rgb(20 12 9 / 0.3), transparent 76%),
+    linear-gradient(
+      to bottom,
+      rgb(20 12 9 / 0.5) 0%,
+      rgb(20 12 9 / 0.22) 45%,
+      rgb(20 12 9 / 0.62) 100%
+    );
+}
+
+.parlamentos {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+  pointer-events: none;
+}
+
+/* La medida NO va aqui: `ch` se resuelve contra el tamaño de fuente de ESTE
+   elemento, que hereda los 16px del body, no los ~96px del titular. Puesto
+   aqui, 22ch daban 200px y el titular salia apilado en una columna. La medida
+   vive en .linea, donde el ch ya vale lo que mide la caja alta. */
+.parlamento {
+  position: relative;
+  grid-area: 1 / 1;
+  width: min(92vw, 64rem);
+  text-align: center;
+  opacity: 0;
+  will-change: opacity, transform;
+  /* Plancha detras del texto y NO encima de todo el plano: el acto 4 amanece
+     con el centro quemado y ni el blanco ni el rojo se leian, pero oscurecer
+     el fotograma entero mataba la escena. Va como fondo del propio bloque y
+     no como pseudo-elemento con z-index negativo, que no llegaba a pintarse
+     dentro del contexto de apilamiento que crea la opacidad de GSAP. */
+  padding: clamp(2.5rem, 7vw, 5rem) clamp(1.5rem, 5vw, 4rem);
+  background: radial-gradient(56% 56% at 50% 50%, rgb(20 12 9 / 0.88), transparent 74%);
+}
+
+.linea {
+  font-size: clamp(2.25rem, 7vw, 6rem);
+  color: var(--paper);
+  max-width: 15ch;
+  margin-inline: auto;
+  /* Seguro contra el fotograma mas claro de la secuencia. */
+  text-shadow: 0 2px 24px rgb(20 12 9 / 0.55);
+}
+
+.linea em {
+  font-style: normal;
+  color: var(--acento-claro); /* 5.9:1 sobre el negro calido */
+}
+
+.apunte {
+  margin-top: 1rem;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.8125rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 0.82);
+  text-shadow: 0 1px 12px rgb(20 12 9 / 0.6);
+}
+
+/* El panel final ocupa el hueco donde el template metia el tablero. */
+.panelCaja {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(88%, 62rem);
+  transform-style: preserve-3d;
+  perspective: 1000px;
+}
+
+.panel {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--black);
+  box-shadow: 0 40px 120px -40px rgb(0 0 0 / 0.8);
+  transform: translateZ(1000px);
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.panel video,
+.panel iframe,
+.panel img {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  object-fit: cover;
+}
+
+.panelVacio {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 0.5rem;
+  text-align: center;
+  padding: 2rem;
+  background: rgb(20 12 9 / 0.72);
+}
+
+.panelVacio strong {
+  font-family: var(--font-display), sans-serif;
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: clamp(1.5rem, 3vw, 2.5rem);
+  color: var(--paper);
+}
+
+.panelVacio span {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 0.6);
+}
+
+/* ── cierre, ya en papel ────────────────────────────────────────────── */
+
+.cierre {
+  position: relative;
+  background: var(--paper);
+  color: var(--fg);
+  min-height: 100dvh;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  padding: clamp(2rem, 8vw, 6rem);
+  gap: 1.75rem;
+}
+
+.cierreTitulo {
+  font-size: clamp(2.5rem, 7vw, 5.5rem);
+  max-width: 16ch;
+  margin-inline: auto;
+}
+
+.cierreTitulo em {
+  font-style: normal;
+  color: var(--acento);
+}
+
+.cierreTexto {
+  font-size: clamp(1rem, 1.6vw, 1.1875rem);
+  color: var(--fg-muted);
+  max-width: 46ch;
+  margin-inline: auto;
+  line-height: 1.6;
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem 2rem;
+  border-radius: 999px;
+  background: var(--acento);
+  color: #fff;
+  font-weight: 500;
+  justify-self: center;
+  transition: background-color 0.2s var(--ease), transform 0.2s var(--ease);
+}
+
+.cta:hover {
+  background: #a30000;
+}
+
+.cta:active {
+  transform: translateY(1px) scale(0.99);
+}
+
+@media (max-width: 640px) {
+  .cta {
+    width: 100%;
+  }
+
+  .marca {
+    padding: 1rem 1.25rem;
+  }
+}
+
+/* Sin movimiento no hay recorrido: una pantalla, el ultimo fotograma, el
+   panel ya puesto y los parlamentos apilados como texto normal. */
+@media (prefers-reduced-motion: reduce) {
+  .escena {
+    height: auto;
+  }
+
+  .pegado {
+    height: auto;
+    min-height: 100dvh;
+    padding-block: 6rem;
+  }
+
+  .parlamentos {
+    position: static;
+    display: flex;
+    flex-direction: column;
+    gap: 3rem;
+  }
+
+  .parlamento {
+    opacity: 1;
+    max-width: 30ch;
+    margin-inline: auto;
+  }
+
+  .panelCaja {
+    position: static;
+    transform: none;
+    margin: 3rem auto 0;
+  }
+
+  .panel {
+    transform: none;
+    opacity: 1;
+  }
+}
