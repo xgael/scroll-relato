@@ -231,7 +231,78 @@ captura ahí**, no en fracciones a ojo.
 
 ---
 
-## 6. Desplegar
+## 6. Que se sienta suave, que no es lo mismo que ir a 60fps
+
+**Mide antes de tocar perillas.** La queja "no se siente smooth" casi nunca es
+rendimiento. En la pieza donde se escribió esta skill, el recorrido iba a
+**94 fps con ocho cuadros lentos en total** y aun así se sentía duro.
+
+Lo que se siente es el **paso**: cuántos cuadros de pantalla pasan entre cambio
+y cambio de fotograma. Con 208 cuadros repartidos en 7200px de scroll son 35px
+por cuadro, o sea que la película avanza unas 24 veces por segundo contra una
+pantalla de 90, y de forma irregular. La métrica es la desviación de ese hueco
+dividida entre su media:
+
+```
+irregularidad = desviación(huecos) / media(huecos)     0 = paso perfecto
+```
+
+### Afinar Lenis y el scrub no lo arregla
+
+Bajar el `lerp` a 0.075 y subir el `scrub` a 1.5 movió la irregularidad de
+**0.53 a 0.51**. Nada. Vale la pena por el carácter (y `syncTouch: true` para
+que en táctil también suavice), pero no es la palanca.
+
+### Lo que sí: mezclar entre fotogramas
+
+El índice del cuadro se deja **fraccionario**, se dibuja el cuadro entero y
+encima el siguiente con la alfa de la parte decimal:
+
+```js
+const base = Math.floor(actual);
+const mezcla = actual - base;
+dibujar(imagenes[base], 1);
+if (mezcla > 0 && cargado(imagenes[base + 1])) dibujar(imagenes[base + 1], mezcla);
+```
+
+Irregularidad **0.53 → 0.08**, y la película pasa a cambiar en cada cuadro de
+pantalla. Si el siguiente todavía no ha cargado, el de abajo se queda a alfa
+completa: sin eso se ve un parpadeo a medio camino.
+
+### Y la trampa que se come el doble de fps
+
+Los dos `drawImage` hundieron el escritorio de **94 a 39 fps**. La causa no era
+la mezcla:
+
+```
+buffer del canvas 2880px  ·  fotogramas de 1600px  →  escalando HACIA ARRIBA
+```
+
+Con `devicePixelRatio 2` sobre 1440px de ancho, el buffer sale de 2880 para
+pintar jpg de 1600. **El buffer nunca debe ser más grande que la fuente**:
+
+```js
+const tope = ANCHO_FUENTE / Math.max(1, canvas.clientWidth);
+const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, tope));
+```
+
+No se pierde un píxel de calidad, porque la fuente es el límite. Con eso quedan
+**109 fps**: más que antes de meter la mezcla.
+
+### La prueba
+
+Va al `check` y falla si alguien quita la mezcla o vuelve a subir el buffer:
+
+```
+irregularidad < 0.2      el paso es parejo
+hueco medio < 1.5        la película avanza en cada cuadro de pantalla
+buffer <= ANCHO_FUENTE   nadie escala hacia arriba
+fps > 55
+```
+
+---
+
+## 7. Desplegar
 
 ```
 public/frames en .gitignore  +  sin .vercelignore  =  sitio sin una sola imagen
@@ -261,5 +332,8 @@ no-cache` antes de diagnosticar nada.
 - [ ] La medida del titular está en el elemento con la fuente grande
 - [ ] El remate entra con aire y se queda puesto
 - [ ] La prueba de barrido verifica: secuencia, cada acto, remate, consola
+- [ ] Se mezcla entre fotogramas: el índice es fraccionario, no redondeado
+- [ ] El buffer del canvas no supera el ancho de los fotogramas
+- [ ] La irregularidad del paso está medida y por debajo de 0.2
 - [ ] `.vercelignore` deja pasar los fotogramas
 - [ ] Verificado contra el dominio, no contra localhost

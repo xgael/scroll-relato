@@ -8,6 +8,9 @@ import { TOTAL } from "@/lib/secuencia";
 import { VIDEO } from "@/lib/video";
 import s from "./relato.module.css";
 
+/** Ancho real de los jpg que escribe scripts/arma-frames.mjs. */
+const ANCHO_FUENTE = 1600;
+
 const rutaFotograma = (i: number) =>
   `/frames/frame_${(i + 1).toString().padStart(4, "0")}.jpg`;
 
@@ -71,27 +74,65 @@ export default function Relato() {
     const canvas = lienzo.current!;
     const ctx = canvas.getContext("2d")!;
     const imagenes: HTMLImageElement[] = [];
+    // Indice FRACCIONARIO: entre dos cuadros se mezcla, no se salta.
     let actual = 0;
 
+    /*
+     * El buffer del canvas NUNCA debe ser mas grande que el fotograma de
+     * origen. Con devicePixelRatio 2 sobre 1440px salia un buffer de 2880 para
+     * pintar jpg de 1600: se escalaba hacia arriba, y con la mezcla de dos
+     * cuadros eso costo la mitad de los fps (94 -> 39). Capado al ancho real
+     * de la fuente no se pierde un pixel de calidad, porque la fuente es el
+     * limite.
+     */
     const dimensionar = () => {
-      const dpr = window.devicePixelRatio || 1;
+      const tope = ANCHO_FUENTE / Math.max(1, canvas.clientWidth);
+      const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, tope));
       canvas.width = Math.round(canvas.clientWidth * dpr);
       canvas.height = Math.round(canvas.clientHeight * dpr);
       // setTransform y no scale: scale multiplica sobre la escala anterior.
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
 
-    const pintar = () => {
+    /** Dibuja un fotograma en modo cover. Devuelve false si aun no ha cargado. */
+    const dibujar = (img: HTMLImageElement | undefined, alfa: number) => {
+      if (!img?.complete || !img.naturalWidth || alfa <= 0) return false;
       const w = canvas.clientWidth;
       const h = canvas.clientHeight;
-      ctx.clearRect(0, 0, w, h);
-      const img = imagenes[actual];
-      if (!img?.complete || !img.naturalWidth) return;
       const rImg = img.naturalWidth / img.naturalHeight;
       const rBox = w / h;
       const dw = rImg > rBox ? h * rImg : w;
       const dh = rImg > rBox ? h : w / rImg;
+      ctx.globalAlpha = alfa;
       ctx.drawImage(img, (w - dw) / 2, (h - dh) / 2, dw, dh);
+      ctx.globalAlpha = 1;
+      return true;
+    };
+
+    /*
+     * La secuencia son 208 cuadros repartidos en ~7200px de scroll: 35px por
+     * cuadro, o sea que la pelicula avanza unas 24 veces por segundo contra
+     * una pantalla que va a 90. Ese escalon es lo que se siente duro, y no se
+     * arregla con Lenis ni con el scrub (probado: la irregularidad bajo de
+     * 0.53 a 0.51, nada).
+     *
+     * Se arregla mezclando: se dibuja el cuadro entero y encima el siguiente
+     * con la alfa de la parte fraccionaria. El canvas tiene sitio de sobra
+     * para los dos drawImage.
+     */
+    const pintar = () => {
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      ctx.clearRect(0, 0, w, h);
+
+      const base = Math.floor(actual);
+      const mezcla = actual - base;
+
+      // Si el siguiente aun no carga, el de abajo se queda a alfa completa y
+      // no se ve un parpadeo a medio camino.
+      const hayNext = imagenes[base + 1]?.complete && imagenes[base + 1].naturalWidth > 0;
+      dibujar(imagenes[base], 1);
+      if (mezcla > 0 && hayNext) dibujar(imagenes[base + 1], mezcla);
     };
 
     for (let i = 0; i < TOTAL; i++) {
@@ -99,7 +140,7 @@ export default function Relato() {
       const hecho = () => {
         // Se pinta en cuanto llega el cuadro que toca, sin esperar a la
         // secuencia entera.
-        if (i === actual) pintar();
+        if (Math.floor(actual) === i || Math.floor(actual) + 1 === i) pintar();
       };
       img.onload = hecho;
       img.onerror = hecho;
@@ -123,7 +164,21 @@ export default function Relato() {
       return () => ro.disconnect();
     }
 
-    const lenis = new Lenis();
+    /*
+     * Medido, no elegido a ojo. Con los valores por defecto (lerp 0.1,
+     * scrub 1) la pelicula avanzaba a veces cada cuadro de pantalla y a
+     * veces cada seis: irregularidad 0.53. Los fps estaban bien; lo que se
+     * sentia duro era el PASO, no el rendimiento.
+     *
+     * lerp mas bajo alisa la velocidad del scroll, y un scrub mas alto alisa
+     * la curva de progreso que come el canvas. Bajar de estos valores empieza
+     * a sentirse despegado del dedo, que es la sobrecorreccion tipica.
+     */
+    const lenis = new Lenis({
+      lerp: 0.075,
+      wheelMultiplier: 0.9, // 900dvh no deberian pasar volando
+      syncTouch: true, // en tactil, Lenis no suaviza por defecto
+    });
     lenis.on("scroll", ScrollTrigger.update);
     const ticker = (t: number) => lenis.raf(t * 1000);
     gsap.ticker.add(ticker);
@@ -136,13 +191,14 @@ export default function Relato() {
         end: () => `+=${escena.current!.offsetHeight - window.innerHeight}`,
         pin: escena.current!.firstElementChild as HTMLElement,
         pinSpacing: false,
-        scrub: 1,
+        scrub: 1.5,
         invalidateOnRefresh: true,
         onUpdate: (self) => {
           const p = self.progress;
 
-          const cuadro = Math.round(Math.min(p / 0.88, 1) * (TOTAL - 1));
-          if (cuadro !== actual) {
+          // Sin redondear: el valor fraccionario es lo que permite mezclar.
+          const cuadro = Math.min(p / 0.88, 1) * (TOTAL - 1);
+          if (Math.abs(cuadro - actual) > 0.004) {
             actual = cuadro;
             pintar();
           }

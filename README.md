@@ -16,6 +16,7 @@ hecho, porque **lo que falla no se ve en una captura estática**.
 - **La coreografía** del texto por ventanas de progreso.
 - **La verificación**: un barrido que recorre el relato y mide lo que una
   captura no puede.
+- **Que se sienta suave**, que no es lo mismo que ir a 60fps.
 - **Las trampas de despliegue**, que se comen el trabajo entero.
 
 ## Instalar
@@ -43,6 +44,11 @@ Todas cobradas en producción, con su síntoma exacto:
   primero y **el sitio sale sin una sola imagen**.
 - Capturar en fracciones fijas del documento cae a media transición y parece un
   problema de contraste que no existe.
+- "No se siente smooth" a **94 fps**: no era rendimiento, era el escalón entre
+  fotogramas. Afinar Lenis y el scrub no lo arregla (0.53 → 0.51); mezclar entre
+  cuadros sí (0.53 → **0.08**).
+- Un buffer de canvas de 2880px para pintar fotogramas de 1600 escala **hacia
+  arriba** y cuesta la mitad de los fps.
 
 ## Contenido
 

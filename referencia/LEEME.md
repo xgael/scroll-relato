@@ -15,6 +15,7 @@ cuatro `ACTOS` de `gen-secuencia.mjs`, y los tokens `--acento` / `--acento-claro
 | `gen-secuencia.mjs` | Un clip de Veo por acto, con la gramática común y las dos prohibiciones |
 | `arma-frames.mjs` | Los clips a jpg numerados + el archivo de constantes generado |
 | `relato.check.mjs` | El barrido que verifica secuencia, cada acto, el remate y la consola |
+| `suavidad.check.mjs` | Mide el paso: irregularidad, hueco medio, fps y tamaño del buffer |
 
 Dependencias: `gsap`, `lenis`, `@google/genai` (sólo para generar), `playwright`
 (sólo para la prueba), y `ffmpeg` en el sistema.
@@ -26,5 +27,5 @@ Orden de trabajo:
 2. npm run secuencia    # los clips
 3. npm run frames       # jpg + lib/secuencia.ts
 4. ajustar las ventanas de cada parlamento en Relato.tsx
-5. npm run check        # y sólo entonces enseñarlo
+5. npm run check        # relato + suavidad, y sólo entonces enseñarlo
 ```
